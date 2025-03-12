@@ -28,7 +28,6 @@ public class Lexer {
 
 	public boolean nextToken() throws Exception {
 
-		boolean quotesDetected = false;
 
 		while (!isEndOfCode()) {
 
@@ -47,8 +46,13 @@ public class Lexer {
 			}
 
 			else if (currentChar == '=') {
-				currentToken = new Token(TokenType.OPER_EQUALS, "=");
-				currentIndex++;
+				if(code.charAt(currentIndex + 1) != '=') {
+					currentToken = new Token(TokenType.OPER_EQUALS, "=");
+					currentIndex++;
+				} else { //////////BOOL
+					currentToken = new Token(TokenType.OPER_IS, "==");
+					currentIndex +=2;
+				}
 			}
 
 			else if (currentChar == '+') {
@@ -100,10 +104,57 @@ public class Lexer {
 			else if (currentChar == '}') {
 				currentToken = new Token(TokenType.BRACKET_CURLY_CLOSED, "}");
 				currentIndex++;
-			} 
+			}
+			//////////BOOL
+			else if (currentChar == '!') {
+				if(code.charAt(currentIndex + 1) == '=') {
+					currentToken = new Token(TokenType.OPER_IS_NOT, "!=");
+					currentIndex +=2;
+				} else {
+					currentToken = new Token(TokenType.OPER_NOT, "!");
+					currentIndex++;
+				}
+			}
+			else if (currentChar == '>') {
+				if(code.charAt(currentIndex + 1) == '=') {
+					currentToken = new Token(TokenType.OPER_MORE_EQUALS, ">=");
+					currentIndex +=2;
+				} else {
+					currentToken = new Token(TokenType.OPER_MORE, ">");
+					currentIndex++;
+				}
+			}
+			else if (currentChar == '<') {
+				if(code.charAt(currentIndex + 1) == '=') {
+					currentToken = new Token(TokenType.OPER_LESS_EQUALS, "<=");
+					currentIndex +=2;
+				} else {
+					currentToken = new Token(TokenType.OPER_LESS, "<");
+					currentIndex++;
+				}
+			}
+			else if (currentChar == '|') {
+				if(code.charAt(currentIndex + 1) == '|') {
+					currentToken = new Token(TokenType.OPER_OR, "||");
+					currentIndex +=2;
+				} else {
+					throw new Exception("Token not defined.");
+				}
+			}
+			else if (currentChar == '&') {
+				if(code.charAt(currentIndex + 1) == '&') {
+					currentToken = new Token(TokenType.OPER_AND, "&&");
+					currentIndex +=2;
+				} else {
+					throw new Exception("Token not defined.");
+				}
+			}
+			else if (currentChar == '}') {
+				currentToken = new Token(TokenType.BRACKET_CURLY_CLOSED, "}");
+				currentIndex++;
+			}
 			////////// READ STRING TEXT
 			else if (currentChar == '\"') {
-				quotesDetected = true;
 				currentIndex++;
 				
 				boolean anotherQuotesDetected = false;
@@ -136,8 +187,6 @@ public class Lexer {
 				currentToken = new Token(TokenType.STRING, sb.toString());
 				
 				currentIndex++;
-				quotesDetected = false;
-				
 			}
 
 			////////// NUMBERS, VARIABLES AND KEY-WORDS
@@ -160,6 +209,12 @@ public class Lexer {
 					currentToken = new Token(TokenType.TRUE, "true");
 				} else if (variableName.equalsIgnoreCase("false")) {
 					currentToken = new Token(TokenType.FALSE, "false");
+				} else if (variableName.equalsIgnoreCase("if")) {
+					currentToken = new Token(TokenType.IF, "if");
+				} else if (variableName.equalsIgnoreCase("elif")) {
+					currentToken = new Token(TokenType.ELIF, "else if");
+				} else if (variableName.equalsIgnoreCase("else")) {
+					currentToken = new Token(TokenType.ELSE, "else");
 				}
 				 else {
 					currentToken = new Token(TokenType.VARIABLE, variableName);
