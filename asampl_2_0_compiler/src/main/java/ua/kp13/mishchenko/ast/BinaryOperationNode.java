@@ -28,9 +28,9 @@ public class BinaryOperationNode extends Node {
     @Override
     public void printAST(String indent) {
         System.out.println(indent + "BinaryOp: " + operator.getValue());
-        System.out.print(indent + "left : ");
-        left.printAST(indent + "  ");
-        System.out.print(indent + "right: ");
-        right.printAST(indent + "  ");
+        System.out.print(indent + " left : ");
+        left.printAST(indent + " ");
+        System.out.print(indent + " right: ");
+        right.printAST(indent + " ");
     }
 }

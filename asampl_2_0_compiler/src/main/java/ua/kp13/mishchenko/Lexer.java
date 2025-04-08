@@ -95,7 +95,26 @@ public class Lexer {
 				currentToken = new Token(TokenType.BRACKET_CLOSED, ")");
 				currentIndex++;
 			}
+			
+			else if (currentChar == ',') {
+				currentToken = new Token(TokenType.COMMA, ",");
+				currentIndex++;
+			}
 
+			else if (currentChar == '[') {
+				currentToken = new Token(TokenType.BRACKET_SQUARE_OPENED, "[");
+				currentIndex++;
+				currentChar = code.charAt(currentIndex);
+				if(currentChar == ']') {
+					currentToken = new Token(TokenType.TYPE_TUPLE, "tuple []");
+					currentIndex++;
+				}
+			}
+			else if (currentChar == ']') {
+				currentToken = new Token(TokenType.BRACKET_SQUARE_CLOSED, "]");
+				currentIndex++;
+			}
+			
 			else if (currentChar == '{') {
 				currentToken = new Token(TokenType.BRACKET_CURLY_OPENED, "{");
 				currentIndex++;
@@ -191,7 +210,28 @@ public class Lexer {
 
 			////////// NUMBERS, VARIABLES AND KEY-WORDS
 			else if (Character.isDigit(currentChar)) {
-				currentToken = new Token(TokenType.NUMBER, readNumber());
+				String number = readNumber();
+				String time = "";
+				currentChar = code.charAt(currentIndex);
+				if(number.length() == 2 && currentChar == ':') {
+					time += number;
+					currentIndex++;
+					currentChar = code.charAt(currentIndex);
+					for(int i = 0; i<3; i++) {
+						String result = readNumber();
+						if(result.length() == 2) {
+							time += ":" + result;
+						} else {
+							//TODO ERROR
+							System.out.println("LEXER ERROR OCCURED WHILE PARSING TIME CONSTRUCTION");
+						}
+						currentIndex++;
+						currentChar = code.charAt(currentIndex);
+					}
+					currentToken = new Token(TokenType.TIME_VALUE, time);
+				} else {
+					currentToken = new Token(TokenType.NUMBER, number);
+				}
 			}
 
 			else if (Character.isLetter(currentChar)) {
@@ -201,10 +241,14 @@ public class Lexer {
 					currentToken = new Token(TokenType.TYPE_INT, "int");
 				} else if (variableName.equalsIgnoreCase("string")) {
 					currentToken = new Token(TokenType.TYPE_STRING, "string");
+				} else if (variableName.equalsIgnoreCase("agregate")) {
+					currentToken = new Token(TokenType.TYPE_AGREGATE, "agregate");
 				} else if (variableName.equalsIgnoreCase("float")) {
 					currentToken = new Token(TokenType.TYPE_FLOAT, "float");
 				} else if (variableName.equalsIgnoreCase("boolean")) {
 					currentToken = new Token(TokenType.TYPE_BOOLEAN, "boolean");
+				} else if (variableName.equalsIgnoreCase("time")) {
+					currentToken = new Token(TokenType.TYPE_TIME, "time");
 				} else if (variableName.equalsIgnoreCase("true")) {
 					currentToken = new Token(TokenType.TRUE, "true");
 				} else if (variableName.equalsIgnoreCase("false")) {
@@ -215,8 +259,17 @@ public class Lexer {
 					currentToken = new Token(TokenType.ELIF, "else if");
 				} else if (variableName.equalsIgnoreCase("else")) {
 					currentToken = new Token(TokenType.ELSE, "else");
-				}
-				 else {
+				} else if (variableName.equalsIgnoreCase("while")) {
+					currentToken = new Token(TokenType.WHILE, "while");
+				} else if (variableName.equalsIgnoreCase("for")) {
+					currentToken = new Token(TokenType.FOR, "for");
+				} else if (variableName.equalsIgnoreCase("void")) {
+					currentToken = new Token(TokenType.VOID, "void");
+				} else if (variableName.equalsIgnoreCase("function")) {
+					currentToken = new Token(TokenType.FUNCTION, "function");
+				} else if (variableName.equalsIgnoreCase("return")) {
+					currentToken = new Token(TokenType.RETURN, "return");
+				} else {
 					currentToken = new Token(TokenType.VARIABLE, variableName);
 				}
 			}
