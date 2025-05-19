@@ -2,6 +2,8 @@ package ua.kp13.mishchenko;
 
 import java.util.Arrays;
 
+import ua.kp13.mishchenko.exceptions.LexerException;
+
 public class Lexer {
 
 	private final String code;
@@ -26,7 +28,7 @@ public class Lexer {
 		return currentToken;
 	}
 
-	public boolean nextToken() throws Exception {
+	public boolean nextToken() throws LexerException {
 
 
 		while (!isEndOfCode()) {
@@ -157,7 +159,7 @@ public class Lexer {
 					currentToken = new Token(TokenType.OPER_OR, "||");
 					currentIndex +=2;
 				} else {
-					throw new Exception("Token not defined.");
+					throw new LexerException("Token not defined.");
 				}
 			}
 			else if (currentChar == '&') {
@@ -165,7 +167,7 @@ public class Lexer {
 					currentToken = new Token(TokenType.OPER_AND, "&&");
 					currentIndex +=2;
 				} else {
-					throw new Exception("Token not defined.");
+					throw new LexerException("Token not defined.");
 				}
 			}
 			else if (currentChar == '}') {
@@ -184,7 +186,7 @@ public class Lexer {
 				}
 
 				if (!anotherQuotesDetected) {
-					throw new Exception("CLOSING \" REQUIRED");
+					throw new LexerException("closing \" required");
 				}
 				anotherQuotesDetected = false;
 				StringBuilder sb = new StringBuilder();
@@ -222,8 +224,7 @@ public class Lexer {
 						if(result.length() == 2) {
 							time += ":" + result;
 						} else {
-							//TODO ERROR
-							System.out.println("LEXER ERROR OCCURED WHILE PARSING TIME CONSTRUCTION");
+							throw new LexerException("lexer error occured while parsing time construction");
 						}
 						currentIndex++;
 						currentChar = code.charAt(currentIndex);
@@ -274,7 +275,7 @@ public class Lexer {
 				}
 			}
 			else {
-				throw new Exception("Token not defined.");
+				throw new LexerException("Token not defined.");
 			}
 
 			return true;

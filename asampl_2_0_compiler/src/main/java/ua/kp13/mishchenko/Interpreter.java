@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,6 +31,7 @@ import ua.kp13.mishchenko.ast.TimeNode;
 import ua.kp13.mishchenko.ast.TupleNode;
 import ua.kp13.mishchenko.ast.VariableNode;
 import ua.kp13.mishchenko.ast.WhileLoopNode;
+import ua.kp13.mishchenko.exceptions.InterpreterException;
 
 
 
@@ -42,35 +44,53 @@ public class Interpreter {
 	private VariableEntry lastReturnRes = null;
 	private String timeRegex = "^([01]?[0-9]|2[0-3]):([0-5]?[0-9]):([0-5]?[0-9]):([0-9]{2})$";
 	private List<String> defaultFunctionNames = new ArrayList<String>();
-
+	private boolean isDebug = false;
+	
+	
+	public Map<String, VariableEntry> getVariableMap(){
+		return variableMap;
+	}
+	
+	public Map<String, FunctionNode> getFunctionsMap(){
+		return functionsMap;
+	}
+	
 	public Interpreter(Node program) {
 		this.program = program;
 		variableMap = new HashMap<String, VariableEntry>();
 		functionsMap = new HashMap<String, FunctionNode>();
 	}
-
-	public void run() {
+	
+	
+	public void run() throws InterpreterException {
+		
 		List<Node> statements = ((ProgramNode) program).getStatements();
-
+		
 		addDefaultASAfunctions();
-
+		
 		runStatements(statements, false, variableMap);
-
-		System.out.println("###################");
-
-		printVariablesMap(variableMap);
-
-		System.out.println("###################");
-
-		printFunctionsMap();
-
-		System.out.println("END");
+		
+	}
+	
+	public void debug() throws InterpreterException {
+		
+		List<Node> statements = ((ProgramNode) program).getStatements();
+		
+		addDefaultASAfunctions();
+		
+		isDebug = true;
+		
+		runStatements(statements, false, variableMap);
+		
 	}
 
 	private boolean checkDefaultFunction(String name) {
 		return defaultFunctionNames.contains(name);
 	}
-
+	
+	
+	
+	
 	private void addDefaultASAfunctions() {
 		defaultFunctionNames.add("uni");
 		defaultFunctionNames.add("sec");
@@ -84,20 +104,49 @@ public class Interpreter {
 		defaultFunctionNames.add("extr");
 		defaultFunctionNames.add("ins");
 		defaultFunctionNames.add("get");
-
+		defaultFunctionNames.add("print");
+		
 		for (String name : defaultFunctionNames) {
 			functionsMap.put(name,
 					new FunctionNode(new VariableNode(new Token(TokenType.VARIABLE, name)), null, null, null));
 		}
 
 	}
-
+	
+	
+	
+	
 	private VariableEntry runStatements(List<Node> statements, boolean isInner,
-			Map<String, VariableEntry> variableMap) {
+			Map<String, VariableEntry> variableMap) throws InterpreterException {
 		List<String> clearList = new ArrayList<String>();
-
+		
 		for (int i = 0; i < statements.size(); i++) {
+			
 			Node statement = statements.get(i);
+			if(isDebug) {
+				System.out.println("#####################");
+				if(isInner) {
+					System.out.println("RUNNING INNER STATEMENT #" + (i + 1) + " [ " + statement.toString() + " ]");
+				} else {
+					System.out.println("RUNNING STATEMENT #" + (i + 1) + " [ " + statement.toString() + " ]");
+				}
+				statement.printAST(" ");
+				printVariablesMap(variableMap);
+				printFunctionsMap();
+				
+				Scanner sc = new Scanner(System.in);
+				try{
+					sc.nextLine();
+				} catch(Exception ex) {
+					sc.close();
+				}
+				
+			}
+			
+			/*if(statement == null) {
+				return null;
+			}*/
+			
 			// INITIALIZATION
 			if (statement.getClass() == InitializationNode.class) {
 				runInitializationOperation((InitializationNode) statement, variableMap);
@@ -114,23 +163,33 @@ public class Interpreter {
 			// BINARY OPERATION
 			else if (statement.getClass() == BinaryOperationNode.class) {
 				System.out.println(runBinaryOperation((BinaryOperationNode) statement, variableMap));
-				// TODO ????????
 
 			}
 			// CONDITIONS SINGLE IF OR IF-ELIF-ELSE BLOCK
+			
+			
 			else if (statement.getClass() == ConditionNode.class) {
 				List<ConditionNode> ifClauseConstruction = new ArrayList<ConditionNode>();
-				while (statements.get(i).getClass() == ConditionNode.class) {
+				
+				
+				boolean flag = false;
+				while (flag == false && statements.get(i).getClass() == ConditionNode.class) {
 					if (((ConditionNode) statements.get(i)).getType() == TokenType.IF
 							&& ifClauseConstruction.size() == 0) {
 						ifClauseConstruction.add((ConditionNode) statements.get(i));
+						
 						i++;
 					} else if (((ConditionNode) statements.get(i)).getType() == TokenType.ELIF) {
 						ifClauseConstruction.add((ConditionNode) statements.get(i));
+						
 						i++;
 					} else if (((ConditionNode) statements.get(i)).getType() == TokenType.ELSE) {
 						ifClauseConstruction.add((ConditionNode) statements.get(i));
+						
 						i++;
+					} else {
+						i--;
+						flag = true;
 					}
 					if (i > statements.size() - 1) {
 						i--;
@@ -140,7 +199,9 @@ public class Interpreter {
 				if (statements.get(i).getClass() != ConditionNode.class) {
 					i--;
 				}
-
+				
+				
+				
 				boolean passed = false;
 				for (int j = 0; j < ifClauseConstruction.size(); j++) {
 					if (passed) {
@@ -149,7 +210,6 @@ public class Interpreter {
 					ConditionNode condition = ifClauseConstruction.get(j);
 					passed = runConditionStatements(condition, variableMap);
 				}
-
 			}
 			// WHILE LOOP
 			else if (statement.getClass() == WhileLoopNode.class) {
@@ -174,8 +234,7 @@ public class Interpreter {
 					runInitializationOperation((InitializationNode) initCounter, variableMap);
 					clearList.add(((InitializationNode) initCounter).getVariableName());
 				} else {
-					// TODO ERROR
-					System.out.println("1ST ARGUMENT OF 'FOR' LOOP CONSTRUCTION MUST BE INITIALIZATION");
+					throw new InterpreterException("1st argument of 'FOR' loop construction must be initialization");
 				}
 
 				while (checkConditionExpression(expression, variableMap)) {
@@ -184,8 +243,7 @@ public class Interpreter {
 					if (step.getClass() == AssignmentNode.class) {
 						runAssignmentOperation((AssignmentNode) step, variableMap);
 					} else {
-						// TODO ERROR
-						System.out.println("3RD ARGUMENT OF 'FOR' LOOP CONSTRUCTION MUST BE ASSIGNMENT");
+						throw new InterpreterException("3rd argument of 'FOR' loop construction must be assignment");
 					}
 				}
 			}
@@ -208,7 +266,9 @@ public class Interpreter {
 				return res;
 
 			}
-
+			
+			
+			
 			if (isReturnCalled) {
 				isReturnCalled = false;
 				break;
@@ -223,7 +283,7 @@ public class Interpreter {
 		return null;
 	}
 
-	private VariableEntry runReturn(ReturnNode node, Map<String, VariableEntry> variableMap) {
+	private VariableEntry runReturn(ReturnNode node, Map<String, VariableEntry> variableMap) throws InterpreterException {
 		Node expression = node.getExpression();
 		TokenType type = TokenType.VOID;
 		Object value = null;
@@ -249,7 +309,7 @@ public class Interpreter {
 			if (res.getClass() == Double.class) {
 				if ((Double) res % 1 == 0) {
 					type = TokenType.TYPE_INT;
-					value = res;
+					value = ((Double)res).intValue();
 				} else {
 					type = TokenType.TYPE_FLOAT;
 					value = res;
@@ -262,7 +322,7 @@ public class Interpreter {
 			Double res = Double.parseDouble(((NumberNode) expression).getToken().getValue());
 			if (res % 1 == 0) {
 				type = TokenType.TYPE_INT;
-				value = res;
+				value = res.intValue();
 			} else {
 				type = TokenType.TYPE_FLOAT;
 				value = res;
@@ -272,41 +332,47 @@ public class Interpreter {
 			value = null;
 		}
 
-		// TODO CLEAR LOGS
-		// System.out.println("FUNCTION RETURNED: " + value.toString());
 		lastReturnRes = new VariableEntry(type, null, value);
 		return lastReturnRes;
 	}
 
-	private VariableEntry runFunctionCall(FunctionCallNode funcCall, Map<String, VariableEntry> variableMap) {
+	private VariableEntry runFunctionCall(FunctionCallNode funcCall, Map<String, VariableEntry> variableMap) throws InterpreterException {
 
 		String funcName = funcCall.getName().getToken().getValue();
 		if (checkDefaultFunction(funcName)) {
 
 			List<VariableEntry> entries = new ArrayList<VariableEntry>();
+			
+			
 
+			
 			for (Node node : funcCall.getArgs()) {
 				//if (checkNodeReturnType(node, TokenType.TYPE_TUPLE, variableMap)) {
 					if (node.getClass() == VariableNode.class) {
 						VariableEntry entry = variableMap.get(((VariableNode) node).getToken().getValue());
 						entries.add(entry);
 					} else {
-						// TODO ERROR
-						System.out.println("EXPECTED VARIABLE IN " + funcName + " call args");
+						throw new InterpreterException("expected variable in " + funcName + " call args");
 					}
 				//}
 			}
-
-			if (funcName.equals("uni") || funcName.equals("sec") || funcName.equals("dif") || funcName.equals("sdif")
+			//PRINT VARIABLE VALUE FUNCTION
+			if(funcName.equals("print")) {
+				if(entries.size() == 1) {
+					System.out.println(entries.get(0).getValue());
+					return null;
+				} else {
+					throw new InterpreterException("error. print function accepts only one argument");
+				}
+			}
+			else if (funcName.equals("uni") || funcName.equals("sec") || funcName.equals("dif") || funcName.equals("sdif")
 					|| funcName.equals("xsec")) {
 
 				if (entries.size() != 2) {
-					// TODO ERROR
-					System.out.println("ERROR. " + funcName + "ACCEPTS ONLY 2 ARGUMENTS");
+					throw new InterpreterException("error. " + funcName + "accepts only 2 arguments");
 				} else if (((TupleEntry) entries.get(0).getValue())
 						.getType() != ((TupleEntry) entries.get(1).getValue()).getType()) {
-					// TODO ERROR
-					System.out.println("ERROR. " + funcName + "TUPLE TYPES MISMATCH");
+					throw new InterpreterException("error. " + funcName + "tuple types mismatch");
 				}
 
 				TupleEntry tupleLeft = (TupleEntry) (entries.get(0).getValue());
@@ -405,15 +471,13 @@ public class Interpreter {
 					|| funcName.equals("singl")) {
 
 				if (entries.size() != 1) {
-					// TODO ERROR
-					System.out.println("ERROR. " + funcName + "ACCEPTS ONLY 1 ARGUMENT");
+					throw new InterpreterException("error. " + funcName + "accepts only 1 argument");
 				}
 
 				Object object = entries.get(0).getValue();
 
 				if (object.getClass() != TupleEntry.class) {
-					// TODO ERROR
-					System.out.println("ERROR. INVALID Tuple variable.");
+					throw new InterpreterException("error. invalid tuple variable.");
 				}
 
 				List<Object> values = ((TupleEntry) object).getValues();
@@ -453,7 +517,12 @@ public class Interpreter {
 					}
 
 					for (double value : resultArray) {
-						resultValues.add(value);
+						if(((TupleEntry)entries.get(0).getValue()).getType() != TokenType.TYPE_INT) {
+							resultValues.add(value);
+						} else {
+							resultValues.add((int) value);
+						}
+						
 					}
 
 				} else if (funcName.equals("dsort")) {
@@ -478,7 +547,12 @@ public class Interpreter {
 					}
 
 					for (double value : resultArray) {
-						resultValues.add(value);
+						if(((TupleEntry)entries.get(0).getValue()).getType() != TokenType.TYPE_INT) {
+							resultValues.add(value);
+						} else {
+							resultValues.add((int) value);
+						}
+						
 					}
 
 				} else if (funcName.equals("singl")) {
@@ -492,7 +566,9 @@ public class Interpreter {
 					}
 				}
 
-				TupleEntry tupleResult = new TupleEntry(entries.get(0).getType(), null, resultValues);
+				
+				
+				TupleEntry tupleResult = new TupleEntry(((TupleEntry)entries.get(0).getValue()).getType(), null, resultValues);
 				lastReturnRes = new VariableEntry(TokenType.TYPE_TUPLE, null, tupleResult);
 				return new VariableEntry(TokenType.TYPE_TUPLE, null, tupleResult);
 			} else if (funcName.equals("extr") || funcName.equals("ins") || funcName.equals("get") ) {
@@ -501,81 +577,68 @@ public class Interpreter {
 				
 				if (funcName.equals("extr")) {
 					if (entries.size() != 2) {
-						// TODO ERROR
-						System.out.println("ERROR. " + funcName + " REQUIRES 2 ARGUMENTS");
+						throw new InterpreterException("error. " + funcName + " requires 2 arguments");
 					}
 					if(entries.get(1).getType() != TokenType.TYPE_INT) {
-						//TODO ERROR
-						System.out.println("ERROR. SECOND ARGUMENT MUST BE INTEGER");
+
+						throw new InterpreterException("error. second argument must be integer");
 					}
 					Object object = entries.get(0).getValue();
 					
 					if (object.getClass() != TupleEntry.class) {
-						// TODO ERROR
-						System.out.println("ERROR. INVALID Tuple variable.");
+						throw new InterpreterException("error. invalid tuple variable.");
 					}
 					int index = Integer.parseInt(entries.get(1).getValue().toString());
 					
 					resultValues = ((TupleEntry)object).getValues();
 					if(index >= resultValues.size()) {
-						//TODO ERROR
-						System.out.println("ERROR. INDEX OUT OF BOUNDS EXCEPTION");
+						throw new InterpreterException("error. index out of bounds exception");
 					}
 					Object result = resultValues.remove(index);
-					//TupleEntry tupleResult = new TupleEntry(entries.get(0).getType(), null, resultValues);
 					lastReturnRes = new VariableEntry(((TupleEntry)object).getType(), null, result);
 					return new VariableEntry(TokenType.TYPE_TUPLE, null, result);
 					
 				} else if (funcName.equals("get")) {
 					if (entries.size() != 2) {
-						// TODO ERROR
-						System.out.println("ERROR. " + funcName + " REQUIRES 2 ARGUMENTS");
+						throw new InterpreterException("error. " + funcName + " requires 2 arguments");
 					}
 					if(entries.get(1).getType() != TokenType.TYPE_INT) {
-						//TODO ERROR
-						System.out.println("ERROR. SECOND ARGUMENT MUST BE INTEGER");
+						throw new InterpreterException("error. second argument must be integer");
 					}
 					Object object = entries.get(0).getValue();
 					
 					if (object.getClass() != TupleEntry.class) {
-						// TODO ERROR
-						System.out.println("ERROR. INVALID Tuple variable.");
+						throw new InterpreterException("error. invalid tuple variable.");
 					}
 					int index = Integer.parseInt(entries.get(1).getValue().toString());
 					
 					resultValues = ((TupleEntry)object).getValues();
 					if(index >= resultValues.size()) {
-						//TODO ERROR
-						System.out.println("ERROR. INDEX OUT OF BOUNDS EXCEPTION");
+						throw new InterpreterException("error. index out of bounds exception");
 					}
 					Object result = resultValues.get(index);
-					//TupleEntry tupleResult = new TupleEntry(entries.get(0).getType(), null, resultValues);
 					lastReturnRes = new VariableEntry(((TupleEntry)object).getType(), null, result);
 					return new VariableEntry(TokenType.TYPE_TUPLE, null, result);
 					
 				} else if (funcName.equals("ins")) {
 					
 					if (entries.size() != 3) {
-						// TODO ERROR
-						System.out.println("ERROR. " + funcName + " REQUIRES 3 ARGUMENTS");
+						throw new InterpreterException("error. " + funcName + " requires 3 arguments");
 					}
 					
 					if(entries.get(1).getType() != TokenType.TYPE_INT) {
-						//TODO ERROR
-						System.out.println("ERROR. SECOND ARGUMENT MUST BE INTEGER");
+						throw new InterpreterException("error. second argument must be integer");
 					}
 					
 					int index = Integer.parseInt(entries.get(1).getValue().toString());
 					Object entry = entries.get(0).getValue();
 					
 					if (entry.getClass() != TupleEntry.class) {
-						// TODO ERROR
-						System.out.println("ERROR. INVALID Tuple variable.");
+						throw new InterpreterException("error. invalid tuple variable.");
 					}
 					
 					if(((TupleEntry)entry).getType() != entries.get(2).getType()) {
-						// TODO ERROR
-						System.out.println("ERROR. INVALID insert variable type.");
+						throw new InterpreterException("error. invalid insert variable type.");
 					}
 					
 					Object insValue = entries.get(2).getValue();
@@ -596,13 +659,11 @@ public class Interpreter {
 
 		FunctionNode func = functionsMap.get(funcCall.getName().getToken().getValue());
 		if (func == null) {
-			// TODO ERROR
-			System.out.println("ERROR. FUNCTION '" + funcCall.getName().getToken().getValue() + "' NOT FOUND.");
+			throw new InterpreterException("error. function '" + funcCall.getName().getToken().getValue() + "' not found.");
 		}
 		if (funcCall.getArgs().size() != func.getArgs().size()) {
-			// TODO ERROR
-			System.out.println("ERROR. FUNCTION '" + funcCall.getName().getToken().getValue()
-					+ "' EXPECTED AMOUNT OF ARGS: " + func.getArgs().size() + ". GOT: " + funcCall.getArgs().size());
+			throw new InterpreterException("error. function '" + funcCall.getName().getToken().getValue()
+					+ "' expected amount of args: " + func.getArgs().size() + ". got: " + funcCall.getArgs().size());
 
 		}
 
@@ -611,9 +672,8 @@ public class Interpreter {
 
 		for (int k = 0; k < func.getArgs().size(); k++) {
 			if (!checkNodeReturnType(gotArgs.get(k), expectedArgs.get(k).getType(), variableMap)) {
-				// TODO ERROR
-				System.out.println("ERROR. FUNCTION '" + funcCall.getName().getToken().getValue()
-						+ "'. EXPECTED ARG TYPE: " + expectedArgs.get(k).getType() + " at index " + k);
+				throw new InterpreterException("error. function '" + funcCall.getName().getToken().getValue()
+						+ "'. expected arg type: " + expectedArgs.get(k).getType() + " at index " + k);
 			} else {
 
 			}
@@ -645,7 +705,7 @@ public class Interpreter {
 		return result;
 	}
 
-	private boolean checkNodeReturnType(Node node, TokenType type, Map<String, VariableEntry> variableMap) {
+	private boolean checkNodeReturnType(Node node, TokenType type, Map<String, VariableEntry> variableMap) throws InterpreterException {
 
 		if (node.getClass() == BooleanNode.class) {
 			return ((BooleanNode) node).getToken().getType() == type;
@@ -685,7 +745,7 @@ public class Interpreter {
 		return false;
 	}
 
-	private boolean checkConditionExpression(Node expression, Map<String, VariableEntry> variableMap) {
+	private boolean checkConditionExpression(Node expression, Map<String, VariableEntry> variableMap) throws InterpreterException {
 		boolean expressionRes = false;
 
 		// LogicalOperation
@@ -700,24 +760,21 @@ public class Interpreter {
 		else if (expression.getClass() == VariableNode.class) {
 			VariableEntry var = variableMap.get(((VariableNode) expression).getToken().getValue());
 			if (var == null) {
-				// TODO EXCEPTION
-				System.out.println("VARIABLE " + ((VariableNode) expression).getToken().getValue() + " NOT FOUND");
+				throw new InterpreterException("variable " + ((VariableNode) expression).getToken().getValue() + " not found");
 			}
 			if (var.getType() != TokenType.TYPE_BOOLEAN) {
-				// TODO EXCEPTION
-				System.out.println("VARIABLE " + ((VariableNode) expression).getToken().getValue() + " IS NOT "
+				throw new InterpreterException("variable " + ((VariableNode) expression).getToken().getValue() + " is not "
 						+ TokenType.TYPE_BOOLEAN.toString());
 			}
 			expressionRes = Boolean.parseBoolean(var.getValue().toString());
 		} else {
-			// TODO EXCEPTION
-			System.out.println("ERROR. IF CLAUSE MUST HAVE VALID CONDITION EXPRESSION");
+			throw new InterpreterException("error. if clause must have valid condition expression");
 		}
 
 		return expressionRes;
 	}
 
-	private boolean runConditionStatements(Node statement, Map<String, VariableEntry> variableMap) {
+	private boolean runConditionStatements(Node statement, Map<String, VariableEntry> variableMap) throws InterpreterException {
 		ConditionNode node = ((ConditionNode) statement);
 		Node expression = node.getExpression();
 		List<Node> innerStatementsList = node.getInnerStatements();
@@ -743,22 +800,38 @@ public class Interpreter {
 		return expressionRes;
 	}
 
-	private void printVariablesMap(Map<String, VariableEntry> variableMap) {
-		System.out.println("VARIABLES MEMORY: ");
+	public void printVariablesMap(Map<String, VariableEntry> variableMap) {
+		System.out.print("VARIABLES MEMORY: ");
+		if(variableMap.isEmpty()) {
+			System.out.println(" empty");
+		} else {
+			System.out.println();
+		}
 		for (Map.Entry<String, VariableEntry> entry : variableMap.entrySet()) {
 			System.out.println(entry.getValue().toString());
 		}
 	}
 
-	private void printFunctionsMap() {
+	public void printFunctionsMap() {
 
-		System.out.println("FUNCTIONS MEMORY: ");
+		System.out.print("FUNCTIONS MEMORY: ");
+		boolean flag = false;
 		for (Map.Entry<String, FunctionNode> entry : functionsMap.entrySet()) {
-			entry.getValue().printAST("");
+			if(!defaultFunctionNames.contains(entry.getKey())) {
+				if(!flag) {
+					System.out.println();
+				}
+				System.out.println(entry.getKey() + "( "+ entry.getValue().getArgs().toString() +" )");
+				//entry.getValue().printAST("");
+				flag = true;
+			}
+		}
+		if(!flag) {
+			System.out.println(" empty");
 		}
 	}
 
-	private void runInitializationOperation(InitializationNode node, Map<String, VariableEntry> variableMap) {
+	private void runInitializationOperation(InitializationNode node, Map<String, VariableEntry> variableMap) throws InterpreterException {
 		Node expression = node.getExpression();
 		String name = node.getVariableName();
 		TokenType type = node.getVariableType().getType();
@@ -776,12 +849,11 @@ public class Interpreter {
 		}
 	}
 
-	private boolean initVariable(TokenType type, String name, Object value, Map<String, VariableEntry> variableMap) {
+	private boolean initVariable(TokenType type, String name, Object value, Map<String, VariableEntry> variableMap) throws InterpreterException {
 		if (variableMap.containsKey(name)) {
-			// TODO error
-			System.out.println("Variable " + name + " is already initialized");
+			throw new InterpreterException("variable " + name + " is already initialized");
 			//
-			return false;
+			//return false;
 		} else {
 			variableMap.put(name, new VariableEntry(type, name, value));
 			return true;
@@ -793,7 +865,7 @@ public class Interpreter {
 		return true;
 	}
 
-	private boolean runLogicalOperation(LogicalOperationNode node, Map<String, VariableEntry> variableMap) {
+	private boolean runLogicalOperation(LogicalOperationNode node, Map<String, VariableEntry> variableMap) throws InterpreterException {
 		Node leftNode = node.getLeft();
 		Node rightNode = node.getRight();
 		Token operator = node.getOperator();
@@ -820,8 +892,7 @@ public class Interpreter {
 			String varName = ((VariableNode) leftNode).getToken().getValue();
 
 			if (variableMap.get(varName).getValue().getClass() == TupleEntry.class) {
-				// TODO ERROR
-				System.out.println("ERROR. NO CASUAL BINARY OPERATIONS ALLOWED WITH THE TUPLES");
+				throw new InterpreterException("error. no binary operations allowed with the tuples");
 			} else if (variableMap.get(varName).getType() == TokenType.TYPE_BOOLEAN) {
 				leftValue = Boolean.parseBoolean(variableMap.get(varName).getValue().toString());
 				isBool = true;
@@ -836,9 +907,7 @@ public class Interpreter {
 					leftNumber = ((Number) variableMap.get(varName).getValue()).doubleValue();
 					isNumber = true;
 				} catch (Exception ex) {
-					// TODO ERROR
-					System.out.println(ex.getMessage());
-					System.out.println("ERROR. CAN NOT ASSIGN "
+					throw new InterpreterException("error. can not assign "
 							+ variableMap.get(((VariableNode) leftNode).getToken().getValue()).getType().toString()
 							+ " value to boolean variable");
 				}
@@ -879,7 +948,7 @@ public class Interpreter {
 				String varName = ((VariableNode) rightNode).getToken().getValue();
 
 				if (variableMap.get(varName).getValue().getClass() == TupleEntry.class) {
-					System.out.println("ERROR. NO CASUAL BINARY OPERATIONS ALLOWED WITH THE TUPLES");
+					throw new InterpreterException("ERROR. NO CASUAL BINARY OPERATIONS ALLOWED WITH THE TUPLES");
 				} else if (variableMap.get(varName).getType() == TokenType.TYPE_BOOLEAN) {
 					rightValue = Boolean.parseBoolean(variableMap.get(varName).getValue().toString());
 					isBool = true;
@@ -894,9 +963,7 @@ public class Interpreter {
 						rightNumber = ((Number) variableMap.get(varName).getValue()).doubleValue();
 						isNumber = true;
 					} catch (Exception ex) {
-						// TODO ERROR
-						System.out.println(ex.getMessage());
-						System.out.println("ERROR. CAN NOT ASSIGN "
+						throw new InterpreterException("error. can not assign "
 								+ variableMap.get(((VariableNode) rightNode).getToken().getValue()).getType().toString()
 								+ " value to boolean variable");
 					}
@@ -932,9 +999,8 @@ public class Interpreter {
 			}
 		} else {
 			if (!isBool) {
-				System.out.println("ERROR. WRONG OPERATOR '!' USAGE");
+				throw new InterpreterException("error. wrong operator '!' usage");
 			}
-			// TODO ERROR
 			return !leftValue;
 		}
 
@@ -992,7 +1058,7 @@ public class Interpreter {
 		return false;
 	}
 
-	private Object runBinaryOperation(BinaryOperationNode node, Map<String, VariableEntry> variableMap) {
+	private Object runBinaryOperation(BinaryOperationNode node, Map<String, VariableEntry> variableMap) throws InterpreterException {
 		Node leftNode = node.getLeft();
 		Node rightNode = node.getRight();
 		Token operator = node.getOperator();
@@ -1029,12 +1095,11 @@ public class Interpreter {
 		} else if (leftNode.getClass() == NumberNode.class) {
 			left = Double.valueOf(((NumberNode) leftNode).getToken().getValue());
 		} else if (leftNode.getClass() == VariableNode.class) {
-			// TODO error
+
 			String varName = ((VariableNode) leftNode).getToken().getValue();
 
 			if (variableMap.get(varName).getValue().getClass() == TupleEntry.class) {
-				// TODO ERROR
-				System.out.println("ERROR. NO CASUAL BINARY OPERATIONS ALLOWED WITH THE TUPLES");
+				throw new InterpreterException("error. no casual binary operations allowed with the tuples");
 			} else if (variableMap.get(varName).getType() == TokenType.TYPE_STRING) {
 				isConcat = true;
 				leftString = variableMap.get(varName).getValue().toString();
@@ -1045,7 +1110,7 @@ public class Interpreter {
 				try {
 					left = ((Number) variableMap.get(varName).getValue()).doubleValue();
 				} catch (Exception ex) {
-					System.out.println(ex.getMessage());
+					throw new InterpreterException(ex.getMessage());
 				}
 			}
 		}
@@ -1079,8 +1144,7 @@ public class Interpreter {
 			String varName = ((VariableNode) rightNode).getToken().getValue();
 
 			if (variableMap.get(varName).getValue().getClass() == TupleEntry.class) {
-				// TODO ERROR
-				System.out.println("ERROR. NO CASUAL BINARY OPERATIONS ALLOWED WITH THE TUPLES");
+				throw new InterpreterException("error. no casual binary operations allowed with the tuples");
 			} else if (variableMap.get(varName).getType() == TokenType.TYPE_STRING) {
 				isConcat = true;
 				rightString = variableMap.get(varName).getValue().toString();
@@ -1091,8 +1155,7 @@ public class Interpreter {
 				try {
 					right = ((Number) variableMap.get(varName).getValue()).doubleValue();
 				} catch (Exception ex) {
-					// TODO error
-					System.out.println(ex.getMessage());
+					throw new InterpreterException(ex.getMessage());
 				}
 			}
 		}
@@ -1103,8 +1166,7 @@ public class Interpreter {
 			if (opType == TokenType.OPER_PLUS) {
 				return leftString + rightString;
 			} else {
-				// TODO ERROR
-				System.out.println("ERROR. OPERATION " + opType.toString() + " IS NOT ALLOWED BETWEEN STRING VALUES");
+				throw new InterpreterException("error. operation " + opType.toString() + " is not allowed between string values");
 			}
 		} else if (isTimeOp) {
 			if (opType == TokenType.OPER_PLUS) {
@@ -1112,17 +1174,15 @@ public class Interpreter {
 			} else if (opType == TokenType.OPER_MINUS) {
 				return TimeNode.diff(leftString, rightString);
 			} else {
-				// TODO ERROR
-				System.out.println("ERROR. OPERATION " + opType.toString() + " IS NOT ALLOWED BETWEEN STRING VALUES");
+				throw new InterpreterException("error. operation " + opType.toString() + " is not allowed between string values");
 			}
 		} else if (opType == TokenType.OPER_PLUS) {
 			return left + right;
 		} else if (opType == TokenType.OPER_MINUS) {
-			return left - right;
+			return (left - right);
 		} else if (opType == TokenType.OPER_DIVISION) {
 			if ((double) right == 0) {
-				System.out.println("DIVISION BY ZERO ERROR");
-				// TODO error
+				throw new InterpreterException("division by zero error");
 			}
 			return left / right;
 
@@ -1131,19 +1191,15 @@ public class Interpreter {
 		} else if (opType == TokenType.OPER_POWER) {
 			return Math.pow(left, right);
 		}
-//		TODO else if (opType = TokenType.OPER_EQUALS) {
-//	
-//		}
+
 		return 0;
 	}
 
-	private void runAssignmentOperation(AssignmentNode node, Map<String, VariableEntry> variableMap) {
+	private void runAssignmentOperation(AssignmentNode node, Map<String, VariableEntry> variableMap) throws InterpreterException {
 		String name = node.getVariableName();
 
 		if (!variableMap.containsKey(name)) {
-			System.out.println("VARIABLE " + name + " WAS NEVER INITIALIZED");
-			// TODO error
-			return;
+			throw new InterpreterException("variable " + name + " was never initialized");
 		}
 
 		VariableEntry variable = variableMap.get(name);
@@ -1161,21 +1217,19 @@ public class Interpreter {
 				
 				for(Node innerEntry : ((AgregateNode)assignmentInnerExpression).getValues()) {
 					if(innerEntry.getClass() != VariableNode.class) {
-						System.out.println("ERROR. AGREGATE ASSIGNMENT FAILURE. INNER VALUES MUST BE VARIABLES");
+						throw new InterpreterException("error. agregate assignment failure. inner values must be variables");
 					}
 					if(checkNodeReturnType(innerEntry, TokenType.TYPE_TUPLE, variableMap)) {
 						VariableEntry var = variableMap.get(((VariableNode)innerEntry).getToken().getValue());
 						entries.add(((TupleEntry)var.getValue()));
 						
 					} else {
-						//TODO ERROR
-						System.out.println("ERROR. AGREGATE ASSIGNMENT FAILURE. VARIABLE TYPE MUST BE TUPLE");
+						throw new InterpreterException("error. agregate assignment failure. variable type must be tuple");
 					}
 				}
-				assignVariable(name, entries, variableMap);
+				assignVariable(name, new AgregateEntry(name, entries), variableMap);
 			} else {
-				//TODO ERROR
-				System.out.println("ERROR. AGREGATE ASSIGNMENT FAILURE.");
+				throw new InterpreterException("error. agregate assignment failure.");
 			}
 		}
 		//TUPLE INITIALIZATION => INNER ASSIGNMENT
@@ -1187,12 +1241,12 @@ public class Interpreter {
 				List<Object> objectElements = new ArrayList<Object>();
 				for (Node element : elements) {
 					if (checkNodeReturnType(element, tupleType, variableMap)) {
+						//TODO
 						objectElements.add(runReturn(new ReturnNode(element), variableMap).getValue());
 						lastReturnRes = null;
 						isReturnCalled = false;
 					} else {
-						// TODO ERROR
-						System.out.println("ERROR! TUPLE ENTRIES TYPE MISSMATCH.");
+						throw new InterpreterException("error! tuple entries type missmatch.");
 					}
 				}
 				TupleEntry entry = new TupleEntry(tupleType, name, objectElements);
@@ -1209,24 +1263,22 @@ public class Interpreter {
 						if (((TupleEntry) variable2.getValue()).getType() == tupleType) {
 							assignVariable(name, variable2.getValue(), variableMap);
 						} else {
-							System.out.println("ERROR. CAN NOT ASSIGN TUPLE"
-									+ ((TupleEntry) variable2.getValue()).getType() + " VALUE TO TUPLE" + tupleType);
+							throw new InterpreterException("error. can not assign tuple"
+									+ ((TupleEntry) variable2.getValue()).getType() + " value to tuple" + tupleType);
 						}
 
 					} else {
-						System.out.println("ERROR. VARIABLE IS NULL");
+						throw new InterpreterException("error. variable is null");
 					}
 				} else {
-					System.out.println("ERROR. CAN NOT ASSIGN " + variable2.getType() + " VALUE TO TUPLE");
+					throw new InterpreterException("error. can not assign " + variable2.getType() + " value to tuple");
 				}
-				// TODO ERRORS
 
 			} else if (assignmentInnerExpression.getClass() == FunctionCallNode.class) {
 				FunctionNode func = functionsMap
 						.get(((FunctionCallNode) assignmentInnerExpression).getName().getToken().getValue());
 				if (func == null) {
-					// TODO ERROR
-					System.out.println("ERROR. FUNCTION NOT FOUND");
+					throw new InterpreterException("error. function not found");
 				}
 
 				if (checkDefaultFunction(func.getName().getToken().getValue())
@@ -1234,16 +1286,12 @@ public class Interpreter {
 					runFunctionCall((FunctionCallNode) assignmentInnerExpression, variableMap);
 					if (lastReturnRes != null) {
 						assignVariable(name, lastReturnRes.getValue(), variableMap);
-						//System.out.println(name);
-						//System.out.println(lastReturnRes.toString());
-						//System.out.println(((TupleEntry) lastReturnRes.getValue()).getValues().toString());
-						// CURRRRRR
 					}
 					lastReturnRes = null;
 					isReturnCalled = false;
 				} else {
-					System.out.println(
-							"TYPE MATCHING ERROR. ASSIGNING " + func.getReturnType().getType() + " TO " + type);
+					throw new InterpreterException(
+							"type matching error. assigning " + func.getReturnType().getType() + " to " + type);
 				}
 			}
 
@@ -1256,16 +1304,13 @@ public class Interpreter {
 			VariableEntry var = variableMap.get(varName);
 
 			if (var == null) {
-				System.out.println("VARIABLE " + varName + " WAS NEVER INITIALIZED");
-				// TODO error
-				return;
+				throw new InterpreterException("variable " + varName + " was never initialized");
 			}
 			if (type == var.getType()) {
 
 				assignVariable(name, var.getValue(), variableMap);
 			} else {
-				System.out.println("ERROR. CAN NOT ASSIGN " + var.getType() + " TO " + type);
-				// TODO error
+				throw new InterpreterException("error. can not assign " + var.getType() + " to " + type);
 			}
 		}
 
@@ -1275,7 +1320,7 @@ public class Interpreter {
 			if (type == TokenType.TYPE_TIME) {
 				assignVariable(name, timeString, variableMap);
 			} else {
-				System.out.println("ERROR. CAN NOT ASSIGN " + TokenType.TYPE_TIME + " TO " + type);
+				throw new InterpreterException("error. can not assign " + TokenType.TYPE_TIME + " to " + type);
 			}
 
 		}
@@ -1295,7 +1340,7 @@ public class Interpreter {
 					doubleNum = Double.parseDouble(number);
 					isDouble = true;
 				} catch (Exception exDouble) {
-					System.out.println("Error: " + exDouble.getLocalizedMessage());
+					throw new InterpreterException("error: " + exDouble.getLocalizedMessage());
 				}
 			}
 
@@ -1314,7 +1359,7 @@ public class Interpreter {
 					assignVariable(name, doubleNum, variableMap);
 				}
 			} else {
-				System.out.println("INITIALIZATION ERROR. VARIABLE TYPE: " + type.toString() + "; NUMBER TYPE: "
+				throw new InterpreterException("initialization error. variable type: " + type.toString() + "; number type: "
 						+ numberType.toString());
 			}
 		}
@@ -1329,7 +1374,6 @@ public class Interpreter {
 			Object resObject = runBinaryOperation((BinaryOperationNode) assignmentInnerExpression, variableMap);
 
 			double resNumber = 0;
-			// System.out.println(resObject.getClass());
 			if (resObject.getClass() != String.class) {
 				resNumber = (double) resObject;
 			} else if (resObject.getClass() == String.class) {
@@ -1338,11 +1382,11 @@ public class Interpreter {
 					return;
 				} else if (type == TokenType.TYPE_TIME) {
 					// TODO CHECK TIME
+					
 					assignVariable(name, resObject.toString(), variableMap);
 					return;
 				} else {
-					System.out.println("TYPE MATCHING ERROR. CAN NOT ASSIGN STRING TO THE " + type.toString());
-					return;
+					throw new InterpreterException("type matching error. can not assign string to the " + type.toString());
 				}
 			} /*
 				 * else { assignVariable(name, resObject, variableMap); return; }
@@ -1364,13 +1408,12 @@ public class Interpreter {
 
 			if (resNumberType == type) {
 				if (isInt) {
-					assignVariable(name, Math.round(resNumber), variableMap);
+					assignVariable(name, (int)Math.round(resNumber), variableMap);
 				} else {
 					assignVariable(name, resNumber, variableMap);
 				}
 			} else {
-				System.out.println("TYPE MATCHING ERROR");
-				// TODO ERROR
+				throw new InterpreterException("type matching error");
 			}
 
 		}
@@ -1381,7 +1424,7 @@ public class Interpreter {
 				boolean value = Boolean.parseBoolean(((BooleanNode) assignmentInnerExpression).getToken().getValue());
 				assignVariable(name, value, variableMap);
 			} else {
-				System.out.println("TYPE MATCHING ERROR. ASSIGNING " + TokenType.TYPE_BOOLEAN + " TO " + type);
+				throw new InterpreterException("type matching error. assigning " + TokenType.TYPE_BOOLEAN + " to " + type);
 			}
 		}
 		// String a = "text";
@@ -1390,15 +1433,14 @@ public class Interpreter {
 				String value = ((StringNode) assignmentInnerExpression).getToken().getValue();
 				assignVariable(name, value, variableMap);
 			} else {
-				System.out.println("TYPE MATCHING ERROR. ASSIGNING " + TokenType.TYPE_STRING + " TO " + type);
+				throw new InterpreterException("type matching error. assigning " + TokenType.TYPE_STRING + " to " + type);
 			}
 
 		} else if (assignmentInnerExpression.getClass() == FunctionCallNode.class) {
 			FunctionNode func = functionsMap
 					.get(((FunctionCallNode) assignmentInnerExpression).getName().getToken().getValue());
 			if (func == null) {
-				// TODO ERROR
-				System.out.println("ERROR. FUNCTION NOT FOUND");
+				throw new InterpreterException("error. function not found");
 			}
 			if(defaultFunctionNames.contains(func.getName().getToken().getValue())) {
 				runFunctionCall((FunctionCallNode) assignmentInnerExpression, variableMap);
@@ -1414,7 +1456,7 @@ public class Interpreter {
 				lastReturnRes = null;
 				isReturnCalled = false;
 			} else {
-				System.out.println("TYPE MATCHING ERROR. ASSIGNING " + func.getReturnType().getType() + " TO " + type);
+				throw new InterpreterException("type matching error. assigning " + func.getReturnType().getType() + " to " + type);
 			}
 		}
 	}

@@ -1,5 +1,7 @@
 package ua.kp13.mishchenko;
 
+import java.util.Objects;
+
 public class VariableEntry {
 
 	private TokenType type;
@@ -27,6 +29,23 @@ public class VariableEntry {
 
 	public String getName() {
 		return name;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(name, type, value);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		VariableEntry other = (VariableEntry) obj;
+		return Objects.equals(name, other.name) && type == other.type && Objects.equals(value, other.value);
 	}
 
 	@Override

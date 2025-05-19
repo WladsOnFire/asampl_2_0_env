@@ -22,6 +22,8 @@ import ua.kp13.mishchenko.ast.TimeNode;
 import ua.kp13.mishchenko.ast.TupleNode;
 import ua.kp13.mishchenko.ast.VariableNode;
 import ua.kp13.mishchenko.ast.WhileLoopNode;
+import ua.kp13.mishchenko.exceptions.LexerException;
+import ua.kp13.mishchenko.exceptions.ParserException;
 
 public class Parser {
 
@@ -38,14 +40,19 @@ public class Parser {
 		this.lexer = lexer;
 	}
 
-	public Node parse() throws Exception {
+	public Node parse() throws ParserException {
 
 		// INITIALIZING CURRENT AND LOOKAHEAD TOKENS
 		move();
 		move();
 
 		while (!lexer.isEndOfCode()) {
-			Node statement = parseStatement();
+			Node statement = null;
+			try {
+				statement = parseStatement();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 
 			if (statement != null) {
 				statements.add(statement);
@@ -56,22 +63,28 @@ public class Parser {
 		return program;
 	}
 
-	private void move() throws Exception {
+	private void move() throws ParserException {
 
 		if (lexer.isEndOfCode()) {
 			// LEXER[i] == PARSER[i]
 			currentToken = lookAheadToken;
 			lookAheadToken = null;
-			// TODO
-			// throw new Exception("END OF THE TOKENS");
 			return;
+			//throw new ParserException("end of the tokens");
 		}
 
 		// LEXER[i+1] == PARSER[i]
-		lexer.nextToken();
+		try {
+			lexer.nextToken();
+		} catch (LexerException e) {
+			throw new ParserException("error. parser inner lexer exception: " + e.getMessage());
+		}
 		currentToken = lexer.getPreviousToken();
 		lookAheadToken = lexer.getCurrentToken();
 
+		//TODO CLEAR
+		
+		/*
 		if (currentToken != null) {
 			System.out.print("current token: " + currentToken.getValue().toString() + "\t");
 		} else {
@@ -81,13 +94,9 @@ public class Parser {
 			System.out.println("next token: " + lookAheadToken.getValue().toString());
 		} else {
 			System.out.println("next token: null");
-		}
+		}*/
 
 	}
-
-	// private Node parseInnerStatement() {
-
-	// }
 
 	private Node parseStatement() throws Exception {
 
@@ -115,12 +124,10 @@ public class Parser {
 					}
 					return new ConditionNode(TokenType.IF, expression, innerStatementsList);
 				} else {
-					// TODO ERROR
-					System.out.println("ERROR. EXPECTED OPENED CURLY BRACKET");
+					throw new ParserException("error. expected opened curly bracket");
 				}
 			} else {
-				// TODO ERROR
-				System.out.println("ERROR. EXPECTED OPENED BRACKET");
+				throw new ParserException("error. expected opened bracket");
 			}
 		}
 
@@ -177,20 +184,16 @@ public class Parser {
 								}
 								return new ConditionNode(TokenType.ELIF, expression, innerStatementsList);
 							} else {
-								// TODO ERROR
-								System.out.println("ERROR. EXPECTED OPENED CURLY BRACKET");
+								throw new ParserException("error. expected opened curly bracket");
 							}
 						} else {
-							// TODO ERROR
-							System.out.println("ERROR. EXPECTED OPENED BRACKET");
+							throw new ParserException("error. expected opened bracket");
 						}
 					} else {
-						// TODO ERROR
-						System.out.println("ERROR. ELIF CLAUSE MUST GO AFTER IF OR ELIF CLAUSE");
+						throw new ParserException("error. elif clause must go after if or elif clause");
 					}
 				} else {
-					// TODO ERROR
-					System.out.println("ERROR. ELIF CLAUSE MUST GO AFTER IF OR ELIF CLAUSE");
+					throw new ParserException("error. elif clause must go after if or elif clause");
 				}
 			}
 
@@ -221,14 +224,13 @@ public class Parser {
 															.getType() == TokenType.ELIF) {
 												innerStatementsList.add(statement);
 											} else {
-												System.out.println(
-														"ERROR." + ((ConditionNode) statement).getType().toString()
-																+ " CLAUSE MUST BE GO AFTER IF OR ELIF CLAUSE.");
+												throw new ParserException(
+														"error." + ((ConditionNode) statement).getType().toString()
+																+ " clause must be go after if or elif clause.");
 											}
 										} else {
-											System.out
-													.println("ERROR." + ((ConditionNode) statement).getType().toString()
-															+ " CLAUSE MUST BE GO AFTER IF OR ELIF CLAUSE.");
+											throw new ParserException("error." + ((ConditionNode) statement).getType().toString()
+															+ " clause must be go after if or elif clause.");
 										}
 									}
 								} else {
@@ -241,16 +243,13 @@ public class Parser {
 							}
 							return new ConditionNode(TokenType.ELSE, null, innerStatementsList);
 						} else {
-							// TODO ERROR
-							System.out.println("ERROR. EXPECTED OPENED CURLY BRACKET");
+							throw new ParserException("error. expected opened curly bracket");
 						}
 					} else {
-						// TODO ERROR
-						System.out.println("ERROR. ELSE CLAUSE MUST GO AFTER IF OR ELIF CLAUSE");
+						throw new ParserException("error. else clause must go after if or elif clause");
 					}
 				} else {
-					// TODO ERROR
-					System.out.println("ERROR. ELSE CLAUSE MUST GO AFTER IF OR ELIF CLAUSE");
+					throw new ParserException("error. else clause must go after if or elif clause");
 				}
 			}
 		}
@@ -285,12 +284,10 @@ public class Parser {
 					}
 					return new ForLoopNode(TokenType.FOR, expression, step, counter, innerStatementsList);
 				} else {
-					// TODO ERROR
-					System.out.println("ERROR. EXPECTED OPENED CURLY BRACKET");
+					throw new ParserException("error. expected opened curly bracket");
 				}
 			} else {
-				// TODO ERROR
-				System.out.println("ERROR. EXPECTED OPENED BRACKET");
+				throw new ParserException("error. expected opened bracket");
 			}
 		}
 
@@ -320,12 +317,10 @@ public class Parser {
 					}
 					return new WhileLoopNode(TokenType.WHILE, expression, innerStatementsList);
 				} else {
-					// TODO ERROR
-					System.out.println("ERROR. EXPECTED OPENED CURLY BRACKET");
+					throw new ParserException("error. expected opened curly bracket");
 				}
 			} else {
-				// TODO ERROR
-				System.out.println("ERROR. EXPECTED OPENED BRACKET");
+				throw new ParserException("error. expected opened bracket");
 			}
 		}
 
@@ -482,8 +477,7 @@ public class Parser {
 								args.add(new VariableEntry(((InitializationNode) arg).getVariableType().getType(),
 										((InitializationNode) arg).getVariableName(), null));
 							} else {
-								// TODO ERROR
-								System.out.println("ERROR. INVALID FUNCTION ARGUMENTS DECLARATION");
+								throw new ParserException("error. invalid function arguments declaration");
 							}
 						}
 					}
@@ -608,15 +602,16 @@ public class Parser {
 			return expression;
 		} else if (token.getType() == TokenType.NEXT_LINE || token.getType() == TokenType.COMMA
 				|| lookAheadToken != null) {
+			
 			move();
-			if (currentToken != null) {
+			if (lookAheadToken != null) {
 				return parseStatement();
 			} else {
 				return null;
 			}
+			
 		} else {
-
-			throw new Exception("Unexpected token: " + token.getValue());
+			throw new ParserException("Unexpected token: " + token.getValue());
 		}
 	}
 }

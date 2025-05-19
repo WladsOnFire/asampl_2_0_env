@@ -1,6 +1,7 @@
 package ua.kp13.mishchenko;
 
 import java.util.List;
+import java.util.Objects;
 
 public class TupleEntry {
 	
@@ -28,6 +29,23 @@ public class TupleEntry {
 
 	public String getName() {
 		return name;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(name, type, values);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		TupleEntry other = (TupleEntry) obj;
+		return Objects.equals(name, other.name) && type == other.type && values.equals(other.values);
 	}
 
 	@Override
