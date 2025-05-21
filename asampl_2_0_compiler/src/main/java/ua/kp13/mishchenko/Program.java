@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.Scanner;
 
@@ -15,22 +16,28 @@ public class Program {
 
 	// TRUE = TURN ON DEBUGGING FEATURE
 	public static boolean isDebug = false;
-	public static String codeFilePath = "C:\\Users\\vladm\\Desktop\\code.asamp";
+	public static String codeFilePath = "C:\\Users\\vladislav\\Desktop\\test.asamp";
 	
 	public static void main(String[] args) throws IOException, URISyntaxException {
 
-		
-		/*if(args.length < 1) {
+		//UNCOMMENT BELOW IN ORDER TO RUN FROM JAR FILE
+		if(args.length < 1) {
 			System.out.println("ERROR. PROGRAM EXECUTION MAY INCLUDE TWO PARAMS: fileUrl[\"C:\\example.asamp\"], isDebug[true/false](optional)");
 			return;
 		} else if(args.length == 2) {
 			isDebug = Boolean.parseBoolean(args[1]);
 		}
 		codeFilePath = args[0];
-		*/
-
-
-		String code = new String(Files.readAllBytes(Paths.get(codeFilePath)));
+		//
+		
+		String code = "";
+		try {
+			code = new String(Files.readAllBytes(Paths.get(codeFilePath)));	
+		} catch(NoSuchFileException ex) {
+			System.out.println("File not found: " + ex.getMessage());
+			return;
+		}
+		
 		Lexer lexer = new Lexer(code);
 		Parser parser = new Parser(lexer);
 

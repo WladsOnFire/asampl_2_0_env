@@ -351,7 +351,10 @@ public class Interpreter {
 					if (node.getClass() == VariableNode.class) {
 						VariableEntry entry = variableMap.get(((VariableNode) node).getToken().getValue());
 						entries.add(entry);
-					} else {
+					} else if(node.getClass() == StringNode.class && funcCall.getName().getToken().getValue().equals("print")) {
+						entries.add(new VariableEntry(TokenType.STRING, null, ((StringNode)node).getToken().getValue()));
+					}
+					else {
 						throw new InterpreterException("expected variable in " + funcName + " call args");
 					}
 				//}
