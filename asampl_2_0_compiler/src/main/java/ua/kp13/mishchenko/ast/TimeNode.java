@@ -9,9 +9,15 @@ import ua.kp13.mishchenko.Token;
 public class TimeNode extends Node{
 
 	private final Token token;
-
-    public TimeNode(Token token) {
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
+	
+    public TimeNode(Token token, int line) {
         this.token = token;
+        this.line = line;
     }
 
     public Token getToken() {

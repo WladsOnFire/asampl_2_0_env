@@ -8,9 +8,15 @@ public class FunctionCallNode extends Node {
 
 	private VariableNode name;
 	private List<Node> args = new ArrayList<Node>();
-
-	public FunctionCallNode(VariableNode name, List<Node> args) {
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
+	
+	public FunctionCallNode(VariableNode name, List<Node> args, int line) {
 		this.name = name;
+		this.line = line;
 		this.args = args;
 	}
 

@@ -4,9 +4,15 @@ import ua.kp13.mishchenko.Token;
 
 public class VariableNode extends Node {
     private final Token token;
-
-    public VariableNode(Token token) {
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
+    
+    public VariableNode(Token token, int line) {
         this.token = token;
+        this.line = line;
     }
 
     public Token getToken() {

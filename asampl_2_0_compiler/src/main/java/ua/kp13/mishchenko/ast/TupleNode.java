@@ -8,10 +8,15 @@ public class TupleNode extends Node{
 
 	private TokenType type;
 	private List<Node> args;
-	
-	public TupleNode(TokenType type, List<Node> args) {
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
+	public TupleNode(TokenType type, List<Node> args, int line) {
 		this.type = type;
 		this.args = args;
+		this.line = line;
 	}
 
 	public TokenType getType() {

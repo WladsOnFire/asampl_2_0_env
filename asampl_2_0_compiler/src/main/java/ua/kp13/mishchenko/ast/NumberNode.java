@@ -4,9 +4,14 @@ import ua.kp13.mishchenko.Token;
 
 public class NumberNode extends Node {
 	private final Token token;
-
-    public NumberNode(Token token) {
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
+    public NumberNode(Token token, int line) {
         this.token = token;
+        this.line = line;
     }
 
     public Token getToken() {

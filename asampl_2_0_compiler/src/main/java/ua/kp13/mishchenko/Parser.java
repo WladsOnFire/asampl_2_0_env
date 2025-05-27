@@ -46,20 +46,19 @@ public class Parser {
 		move();
 		move();
 
-		while (!lexer.isEndOfCode()) {
+		while (!lexer.isEndOfCode() && !lexer.getIsExceptionThrown()) {
 			Node statement = null;
-			try {
-				statement = parseStatement();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			
+			statement = parseStatement();
+			
 
 			if (statement != null) {
 				statements.add(statement);
 			}
+			
 		}
 
-		Node program = new ProgramNode(statements);
+		Node program = new ProgramNode(statements, lexer.getLine());
 		return program;
 	}
 
@@ -75,9 +74,9 @@ public class Parser {
 
 		// LEXER[i+1] == PARSER[i]
 		try {
-			lexer.nextToken();
+		lexer.nextToken();
 		} catch (LexerException e) {
-			throw new ParserException("error. parser inner lexer exception: " + e.getMessage());
+			throw new ParserException("error. can not parse code. inner lexer exception: " + e.getMessage());
 		}
 		currentToken = lexer.getPreviousToken();
 		lookAheadToken = lexer.getCurrentToken();
@@ -98,7 +97,7 @@ public class Parser {
 
 	}
 
-	private Node parseStatement() throws Exception {
+	private Node parseStatement() throws ParserException {
 
 		// IF CLAUSE
 		if (currentToken.getType() == TokenType.IF) {
@@ -122,12 +121,12 @@ public class Parser {
 							move();
 						}
 					}
-					return new ConditionNode(TokenType.IF, expression, innerStatementsList);
+					return new ConditionNode(TokenType.IF, expression, innerStatementsList, lexer.getLine());
 				} else {
-					throw new ParserException("error. expected opened curly bracket");
+					throw new ParserException("error. expected opened curly bracket." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 				}
 			} else {
-				throw new ParserException("error. expected opened bracket");
+				throw new ParserException("error. expected opened bracket." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 			}
 		}
 
@@ -182,18 +181,18 @@ public class Parser {
 										move();
 									}
 								}
-								return new ConditionNode(TokenType.ELIF, expression, innerStatementsList);
+								return new ConditionNode(TokenType.ELIF, expression, innerStatementsList, lexer.getLine());
 							} else {
-								throw new ParserException("error. expected opened curly bracket");
+								throw new ParserException("error. expected opened curly bracket."+ " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 							}
 						} else {
-							throw new ParserException("error. expected opened bracket");
+							throw new ParserException("error. expected opened bracket."+ " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 						}
 					} else {
-						throw new ParserException("error. elif clause must go after if or elif clause");
+						throw new ParserException("error. elif clause must go after if or elif clause." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 					}
 				} else {
-					throw new ParserException("error. elif clause must go after if or elif clause");
+					throw new ParserException("error. elif clause must go after if or elif clause." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 				}
 			}
 
@@ -226,11 +225,11 @@ public class Parser {
 											} else {
 												throw new ParserException(
 														"error." + ((ConditionNode) statement).getType().toString()
-																+ " clause must be go after if or elif clause.");
+																+ " clause must be go after if or elif clause."+ " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 											}
 										} else {
 											throw new ParserException("error." + ((ConditionNode) statement).getType().toString()
-															+ " clause must be go after if or elif clause.");
+															+ " clause must be go after if or elif clause."+ " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 										}
 									}
 								} else {
@@ -241,15 +240,15 @@ public class Parser {
 									move();
 								}
 							}
-							return new ConditionNode(TokenType.ELSE, null, innerStatementsList);
+							return new ConditionNode(TokenType.ELSE, null, innerStatementsList, lexer.getLine());
 						} else {
-							throw new ParserException("error. expected opened curly bracket");
+							throw new ParserException("error. expected opened curly bracket." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 						}
 					} else {
-						throw new ParserException("error. else clause must go after if or elif clause");
+						throw new ParserException("error. else clause must go after if or elif clause." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 					}
 				} else {
-					throw new ParserException("error. else clause must go after if or elif clause");
+					throw new ParserException("error. else clause must go after if or elif clause." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 				}
 			}
 		}
@@ -282,12 +281,12 @@ public class Parser {
 							move();
 						}
 					}
-					return new ForLoopNode(TokenType.FOR, expression, step, counter, innerStatementsList);
+					return new ForLoopNode(TokenType.FOR, expression, step, counter, innerStatementsList, lexer.getLine());
 				} else {
-					throw new ParserException("error. expected opened curly bracket");
+					throw new ParserException("error. expected opened curly bracket." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 				}
 			} else {
-				throw new ParserException("error. expected opened bracket");
+				throw new ParserException("error. expected opened bracket."+ " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 			}
 		}
 
@@ -315,18 +314,18 @@ public class Parser {
 							move();
 						}
 					}
-					return new WhileLoopNode(TokenType.WHILE, expression, innerStatementsList);
+					return new WhileLoopNode(TokenType.WHILE, expression, innerStatementsList, lexer.getLine());
 				} else {
-					throw new ParserException("error. expected opened curly bracket");
+					throw new ParserException("error. expected opened curly bracket." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 				}
 			} else {
-				throw new ParserException("error. expected opened bracket");
+				throw new ParserException("error. expected opened bracket." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 			}
 		}
 
 		if (currentToken.getType() == TokenType.VARIABLE) {
 			String varName = currentToken.getValue().toString();
-			VariableNode funcName = new VariableNode(currentToken);
+			VariableNode funcName = new VariableNode(currentToken, lexer.getLine());
 
 			// FUNCTION CALL
 			List<Node> arguments = new ArrayList<Node>();
@@ -343,7 +342,7 @@ public class Parser {
 					}
 					arguments.add(arg);
 				}
-				return new FunctionCallNode(funcName, arguments);
+				return new FunctionCallNode(funcName, arguments, lexer.getLine());
 			}
 			
 			// ASSIGNMENT v = ... ;
@@ -351,7 +350,7 @@ public class Parser {
 				move();
 				move(); // SKIP "="
 				Node expression = parseStatement();
-				return new AssignmentNode(varName, expression);
+				return new AssignmentNode(varName, expression, lexer.getLine());
 			}
 		}
 
@@ -359,10 +358,10 @@ public class Parser {
 		if (currentToken.getType() == TokenType.RETURN) {
 			move();
 			if (currentToken.getType() == TokenType.NEXT_LINE) {
-				return new ReturnNode(null);
+				return new ReturnNode(null, lexer.getLine());
 			} else {
 				Node expression = parseStatement();
-				return new ReturnNode(expression);
+				return new ReturnNode(expression, lexer.getLine());
 			}
 		}
 
@@ -402,8 +401,8 @@ public class Parser {
 						}
 					}
 					move();
-					Node node = new AgregateNode(typeToken.getType(), args);
-					return new InitializationNode(variable.getValue(), node, typeToken);
+					Node node = new AgregateNode(typeToken.getType(), args, lexer.getLine());
+					return new InitializationNode(variable.getValue(), node, typeToken, lexer.getLine());
 				}
 			}
 			
@@ -417,7 +416,7 @@ public class Parser {
 					Token tupleToken = currentToken;
 					
 					List<Node> args = new ArrayList<Node>();
-					Node node = new TupleNode(typeToken.getType(),args);
+					Node node = new TupleNode(typeToken.getType(),args, lexer.getLine());
 					
 					move();
 					
@@ -441,7 +440,7 @@ public class Parser {
 						}
 					}
 					move();
-					return new InitializationNode(variable.getValue(), node, tupleToken);
+					return new InitializationNode(variable.getValue(), node, tupleToken, lexer.getLine());
 				}
 			}
 			
@@ -449,7 +448,7 @@ public class Parser {
 			// VARIABLE INITIALIZATION
 			if (lookAheadToken.getType() == TokenType.VARIABLE) {
 				Token varTypeToken = currentToken;
-				return new InitializationNode(lookAheadToken.getValue(), parseExpression(), varTypeToken);
+				return new InitializationNode(lookAheadToken.getValue(), parseExpression(), varTypeToken, lexer.getLine());
 
 			}
 
@@ -459,7 +458,7 @@ public class Parser {
 				move();
 				if (lookAheadToken.getType() == TokenType.VARIABLE) {
 					move();
-					VariableNode funcName = new VariableNode(currentToken);
+					VariableNode funcName = new VariableNode(currentToken, lexer.getLine());
 					List<VariableEntry> args = new ArrayList<VariableEntry>();
 					
 					if (lookAheadToken.getType() == TokenType.BRACKET_OPENED) {
@@ -477,7 +476,7 @@ public class Parser {
 								args.add(new VariableEntry(((InitializationNode) arg).getVariableType().getType(),
 										((InitializationNode) arg).getVariableName(), null));
 							} else {
-								throw new ParserException("error. invalid function arguments declaration");
+								throw new ParserException("error. invalid function arguments declaration."+ " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 							}
 						}
 					}
@@ -498,7 +497,7 @@ public class Parser {
 							}
 						}
 					}
-					return new FunctionNode(funcName, returnType, args, innerStatementsList);
+					return new FunctionNode(funcName, returnType, args, innerStatementsList, lexer.getLine());
 
 				}
 			}
@@ -509,7 +508,7 @@ public class Parser {
 		return parseExpression();
 	}
 
-	private Node parseExpression() throws Exception {
+	private Node parseExpression() throws ParserException {
 
 		Node left = parsePriorOper();
 
@@ -522,7 +521,7 @@ public class Parser {
 
 			Node right = parsePriorOper();
 
-			left = new BinaryOperationNode(left, operator, right);
+			left = new BinaryOperationNode(left, operator, right, lexer.getLine());
 		}
 
 		while (currentToken != null
@@ -533,14 +532,14 @@ public class Parser {
 
 			Node right = parsePriorOper();
 
-			left = new LogicalOperationNode(left, operator, right);
+			left = new LogicalOperationNode(left, operator, right, lexer.getLine());
 		}
 		// }
 
 		return left;
 	}
 
-	private Node parsePriorOper() throws Exception {
+	private Node parsePriorOper() throws ParserException {
 		Node left = parseArgs();
 
 		while (currentToken != null && (currentToken.getType() == TokenType.OPER_MULTIPLY
@@ -551,7 +550,7 @@ public class Parser {
 			move();
 
 			Node right = parseArgs();
-			left = new BinaryOperationNode(left, operator, right);
+			left = new BinaryOperationNode(left, operator, right, lexer.getLine());
 		}
 
 		while (currentToken != null && (currentToken.getType() == TokenType.OPER_IS
@@ -565,38 +564,38 @@ public class Parser {
 
 			Node right = parseArgs();
 
-			left = new LogicalOperationNode(left, operator, right);
+			left = new LogicalOperationNode(left, operator, right, lexer.getLine());
 		}
 		return left;
 	}
 
-	private Node parseArgs() throws Exception {
+	private Node parseArgs() throws ParserException {
 		Token token = currentToken;
 
 		if (token.getType() == TokenType.STRING) {
 			move();
-			return new StringNode(token);
+			return new StringNode(token, lexer.getLine());
 		} else if (token.getType() == TokenType.NUMBER) {
 			move();
-			return new NumberNode(token);
+			return new NumberNode(token, lexer.getLine());
 		} else if (token.getType() == TokenType.TIME_VALUE) {
 			move();
-			return new TimeNode(token);
+			return new TimeNode(token, lexer.getLine());
 		} else if (token.getType() == TokenType.FALSE || token.getType() == TokenType.TRUE) {
 			move();
-			return new BooleanNode(token);
+			return new BooleanNode(token, lexer.getLine());
 		} else if (token.getType() == TokenType.OPER_NOT) {
 			move();
 			Node expression = parsePriorOper();
-			return new LogicalOperationNode(expression, token, null);
+			return new LogicalOperationNode(expression, token, null, lexer.getLine());
 		} else if (token.getType() == TokenType.VARIABLE) {
 			move();
-			return new VariableNode(token);
+			return new VariableNode(token, lexer.getLine());
 		} else if (token.getType() == TokenType.BRACKET_OPENED) {
 			move();
 			Node expression = parseExpression();
 			if (currentToken.getType() != TokenType.BRACKET_CLOSED && !parsingForExpressions) {
-				throw new Exception("Expected closing bracket");
+				throw new ParserException("Expected closing bracket."+ " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 			}
 			move();
 			return expression;
@@ -611,7 +610,7 @@ public class Parser {
 			}
 			
 		} else {
-			throw new ParserException("Unexpected token: " + token.getValue());
+			throw new ParserException("Unexpected token: " + token.getValue() + "." + " line: " + lexer.getLine() + " , pos: " + lexer.getPos());
 		}
 	}
 }

@@ -12,12 +12,17 @@ public class ForLoopNode extends Node{
 	private Node step;
 	private Node counter;
 	private List<Node> statementsList = new ArrayList<Node>();
-	
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
 	
 	
 	public ForLoopNode(TokenType token, Node runCondition, Node step,
-			Node counter, List<Node> statementsList) {
+			Node counter, List<Node> statementsList, int line) {
 		this.token = token;
+		this.line = line;
 		this.runCondition = runCondition;
 		this.step = step;
 		this.counter = counter;

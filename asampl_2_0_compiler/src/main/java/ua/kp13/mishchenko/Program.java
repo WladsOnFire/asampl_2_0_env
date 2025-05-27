@@ -10,13 +10,15 @@ import java.util.Scanner;
 
 import ua.kp13.mishchenko.ast.Node;
 import ua.kp13.mishchenko.ast.ProgramNode;
+import ua.kp13.mishchenko.exceptions.CompilerException;
 import ua.kp13.mishchenko.exceptions.InterpreterException;
+import ua.kp13.mishchenko.exceptions.ParserException;
 
 public class Program {
 
 	// TRUE = TURN ON DEBUGGING FEATURE
 	public static boolean isDebug = false;
-	public static String codeFilePath = "C:\\Users\\vladislav\\Desktop\\test.asamp";
+	public static String codeFilePath = "C:\\Users\\vladislav\\Desktop\\code.txt";
 	
 	public static void main(String[] args) throws IOException, URISyntaxException {
 
@@ -45,8 +47,9 @@ public class Program {
 
 		try {
 			ast = parser.parse();
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (ParserException e) {
+			System.out.println(e.getMessage());
+			return;
 		}
 
 		Interpreter interpr = new Interpreter(ast);
@@ -63,8 +66,8 @@ public class Program {
 
 			try {
 				interpr.debug();
-			} catch (InterpreterException e) {
-				e.printStackTrace();
+			} catch (Exception e) {
+				System.out.println(e.getMessage());
 			}
 
 			System.out.println("###################");
@@ -74,8 +77,8 @@ public class Program {
 		} else {
 			try {
 				interpr.run();
-			} catch (InterpreterException e) {
-				e.printStackTrace();
+			} catch (Exception e) {
+				System.out.println(e.getMessage());
 			}
 		}
 

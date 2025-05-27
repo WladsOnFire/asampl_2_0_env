@@ -13,6 +13,19 @@ public class Lexer {
 
 	private Token currentToken;
 	private Token previousToken;
+	private boolean isExceptionThrown = false;
+	private int line = 1;
+	private int pos = 0;
+	
+	
+	
+	public int getLine() {
+		return line;
+	}
+
+	public int getPos() {
+		return pos;
+	}
 
 	public Lexer(String code) {
 		this.code = code;
@@ -28,10 +41,19 @@ public class Lexer {
 		return currentToken;
 	}
 
+	public boolean getIsExceptionThrown() {
+		return isExceptionThrown;
+	}
+	
+	private void moveIndex() {
+		currentIndex += 1;
+		pos++;
+	};
+	
 	public boolean nextToken() throws LexerException {
 
 
-		while (!isEndOfCode()) {
+		while (!isEndOfCode() && !isExceptionThrown) {
 
 			previousToken = currentToken;
 
@@ -44,13 +66,13 @@ public class Lexer {
 
 			else if (currentChar == ';') {
 				currentToken = new Token(TokenType.NEXT_LINE, ";");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '=') {
 				if(code.charAt(currentIndex + 1) != '=') {
 					currentToken = new Token(TokenType.OPER_EQUALS, "=");
-					currentIndex++;
+					moveIndex();
 				} else { //////////BOOL
 					currentToken = new Token(TokenType.OPER_IS, "==");
 					currentIndex +=2;
@@ -59,72 +81,72 @@ public class Lexer {
 
 			else if (currentChar == '+') {
 				currentToken = new Token(TokenType.OPER_PLUS, "+");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '-') {
 				currentToken = new Token(TokenType.OPER_MINUS, "-");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '*') {
 				currentToken = new Token(TokenType.OPER_MULTIPLY, "*");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '/') {
 				currentToken = new Token(TokenType.OPER_DIVISION, "/");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '^') {
 				currentToken = new Token(TokenType.OPER_POWER, "^");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '.') {
 
 				currentToken = new Token(TokenType.FLOATING_POINT, ".");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '(') {
 				currentToken = new Token(TokenType.BRACKET_OPENED, "(");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == ')') {
 				currentToken = new Token(TokenType.BRACKET_CLOSED, ")");
-				currentIndex++;
+				moveIndex();
 			}
 			
 			else if (currentChar == ',') {
 				currentToken = new Token(TokenType.COMMA, ",");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '[') {
 				currentToken = new Token(TokenType.BRACKET_SQUARE_OPENED, "[");
-				currentIndex++;
+				moveIndex();
 				currentChar = code.charAt(currentIndex);
 				if(currentChar == ']') {
 					currentToken = new Token(TokenType.TYPE_TUPLE, "tuple []");
-					currentIndex++;
+					moveIndex();
 				}
 			}
 			else if (currentChar == ']') {
 				currentToken = new Token(TokenType.BRACKET_SQUARE_CLOSED, "]");
-				currentIndex++;
+				moveIndex();
 			}
 			
 			else if (currentChar == '{') {
 				currentToken = new Token(TokenType.BRACKET_CURLY_OPENED, "{");
-				currentIndex++;
+				moveIndex();
 			}
 
 			else if (currentChar == '}') {
 				currentToken = new Token(TokenType.BRACKET_CURLY_CLOSED, "}");
-				currentIndex++;
+				moveIndex();
 			}
 			//////////BOOL
 			else if (currentChar == '!') {
@@ -133,7 +155,7 @@ public class Lexer {
 					currentIndex +=2;
 				} else {
 					currentToken = new Token(TokenType.OPER_NOT, "!");
-					currentIndex++;
+					moveIndex();
 				}
 			}
 			else if (currentChar == '>') {
@@ -142,7 +164,7 @@ public class Lexer {
 					currentIndex +=2;
 				} else {
 					currentToken = new Token(TokenType.OPER_MORE, ">");
-					currentIndex++;
+					moveIndex();
 				}
 			}
 			else if (currentChar == '<') {
@@ -151,7 +173,7 @@ public class Lexer {
 					currentIndex +=2;
 				} else {
 					currentToken = new Token(TokenType.OPER_LESS, "<");
-					currentIndex++;
+					moveIndex();
 				}
 			}
 			else if (currentChar == '|') {
@@ -172,11 +194,11 @@ public class Lexer {
 			}
 			else if (currentChar == '}') {
 				currentToken = new Token(TokenType.BRACKET_CURLY_CLOSED, "}");
-				currentIndex++;
+				moveIndex();
 			}
 			////////// READ STRING TEXT
 			else if (currentChar == '\"') {
-				currentIndex++;
+				moveIndex();
 				
 				boolean anotherQuotesDetected = false;
 				for (int i = (currentIndex); i < code.length(); i++) {
@@ -197,7 +219,7 @@ public class Lexer {
 
 					currentChar = code.charAt(currentIndex);
 
-					currentIndex++;
+					moveIndex();
 
 					if (isEndOfCode())
 						break;
@@ -207,7 +229,7 @@ public class Lexer {
 				
 				currentToken = new Token(TokenType.STRING, sb.toString());
 				
-				currentIndex++;
+				moveIndex();
 			}
 
 			////////// NUMBERS, VARIABLES AND KEY-WORDS
@@ -217,7 +239,7 @@ public class Lexer {
 				currentChar = code.charAt(currentIndex);
 				if(number.length() == 2 && currentChar == ':') {
 					time += number;
-					currentIndex++;
+					moveIndex();
 					currentChar = code.charAt(currentIndex);
 					for(int i = 0; i<3; i++) {
 						String result = readNumber();
@@ -226,7 +248,7 @@ public class Lexer {
 						} else {
 							throw new LexerException("lexer error occured while parsing time construction");
 						}
-						currentIndex++;
+						moveIndex();
 						currentChar = code.charAt(currentIndex);
 					}
 					currentToken = new Token(TokenType.TIME_VALUE, time);
@@ -275,7 +297,8 @@ public class Lexer {
 				}
 			}
 			else {
-				throw new LexerException("Token not defined.");
+				isExceptionThrown = true;
+				throw new LexerException("Token not defined. Got: \"" + currentChar + "\" line: " + line + " , pos: " + pos);
 			}
 
 			return true;
@@ -294,7 +317,7 @@ public class Lexer {
 
 		while (!isEndOfCode() && Character.isDigit(currentChar)) {
 			sb.append(currentChar);
-			currentIndex++;
+			moveIndex();
 			if (isEndOfCode())
 				break;
 			previousChar = currentChar;
@@ -302,7 +325,7 @@ public class Lexer {
 
 			if (previousChar != 0 && currentChar == '.') {
 				sb.append(currentChar);
-				currentIndex++;
+				moveIndex();
 				previousChar = currentChar;
 				currentChar = code.charAt(currentIndex);
 			}
@@ -315,7 +338,7 @@ public class Lexer {
 		char currentChar = code.charAt(currentIndex);
 		while (!isEndOfCode() && (Character.isLetter(currentChar) || Character.isDigit(currentChar))) {
 			sb.append(currentChar);
-			currentIndex++;
+			moveIndex();
 			if (isEndOfCode())
 				break;
 			currentChar = code.charAt(currentIndex);
@@ -327,8 +350,14 @@ public class Lexer {
 		while (!isEndOfCode()) {
 			if (Arrays.asList(' ', '\r', '\t', '\n').contains(code.charAt(currentIndex))) { // whitespace, carriage
 																							// return,
-																							// tab, new line
-				currentIndex++;
+																							// tab, new line																
+				moveIndex();
+				if(!isEndOfCode()) {
+					if (Arrays.asList('\n').contains(code.charAt(currentIndex))) {
+						line++; //FOR EXCEPTIONS
+						pos = 0;
+					}
+				}
 			} else {
 				break;
 			}

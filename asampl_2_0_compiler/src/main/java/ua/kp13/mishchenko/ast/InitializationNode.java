@@ -6,10 +6,15 @@ public class InitializationNode extends Node {
 	private final String variableName;
 	private final Token variableType;
 	private final Node expression;
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
 
-	public InitializationNode(String variableName, Node expression, Token variableType) {
+	public InitializationNode(String variableName, Node expression, Token variableType, int line) {
 		this.variableName = variableName;
-
+		this.line = line;
 		if (expression.getClass() == VariableNode.class) {
 			this.expression = null;
 		} else {

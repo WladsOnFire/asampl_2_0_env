@@ -8,10 +8,16 @@ public class AgregateNode extends Node{
 
 	private TokenType type;
 	private List<Node> values;
+	private int line;
 	
-	public AgregateNode(TokenType type, List<Node> values) {
+	public AgregateNode(TokenType type, List<Node> values, int line) {
 		this.type = type;
 		this.values = values;
+		this.line = line;
+	}
+	
+	public int getLine() {
+		return line;
 	}
 
 	public TokenType getType() {

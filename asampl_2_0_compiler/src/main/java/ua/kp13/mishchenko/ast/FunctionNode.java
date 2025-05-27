@@ -12,7 +12,11 @@ public class FunctionNode extends Node{
 	private Token returnType;
 	private List<VariableEntry> args = new ArrayList<VariableEntry>();
 	private List<Node> innerStatements = new ArrayList<Node>();
-	
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
 	public VariableNode getName() {
 		return name;
 	}
@@ -28,8 +32,9 @@ public class FunctionNode extends Node{
 	
 	
 	
-	public FunctionNode(VariableNode name, Token returnType, List<VariableEntry> args, List<Node> innerStatements) {
+	public FunctionNode(VariableNode name, Token returnType, List<VariableEntry> args, List<Node> innerStatements, int line) {
 		this.name = name;
+		this.line = line;
 		this.returnType = returnType;
 		this.args = args;
 		this.innerStatements = innerStatements;

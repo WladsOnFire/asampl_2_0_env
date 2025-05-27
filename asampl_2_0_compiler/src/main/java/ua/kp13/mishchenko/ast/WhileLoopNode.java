@@ -10,11 +10,16 @@ public class WhileLoopNode extends Node{
 	private TokenType token;
 	private Node runCondition;
 	private List<Node> statementsList = new ArrayList<Node>();
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
 	
 	
-	
-	public WhileLoopNode(TokenType token, Node runCondition, List<Node> statementsList) {
+	public WhileLoopNode(TokenType token, Node runCondition, List<Node> statementsList, int line) {
 		this.token = token;
+		this.line = line;
 		this.runCondition = runCondition;
 		this.statementsList = statementsList;
 	}

@@ -8,7 +8,12 @@ public class ConditionNode extends Node {
 	private TokenType type;
 	private Node expression;
 	private List<Node> innerStatements;
-
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
+	
 	public TokenType getType() {
 		return type;
 	}
@@ -21,8 +26,9 @@ public class ConditionNode extends Node {
 		return innerStatements;
 	}
 
-	public ConditionNode(TokenType type, Node expression, List<Node> innerStatements) {
+	public ConditionNode(TokenType type, Node expression, List<Node> innerStatements, int line) {
 		this.type = type;
+		this.line = line;
 		this.expression = expression;
 		this.innerStatements = innerStatements;
 	}

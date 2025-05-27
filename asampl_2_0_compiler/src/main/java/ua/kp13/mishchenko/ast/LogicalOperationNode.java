@@ -6,9 +6,14 @@ public class LogicalOperationNode extends Node {
     private final Node left;
     private final Token operator;
     private final Node right;
-
-    public LogicalOperationNode(Node left, Token operator, Node right) {
+	private int line;
+    
+	public int getLine() {
+		return line;
+	}
+    public LogicalOperationNode(Node left, Token operator, Node right, int line) {
         this.left = left;
+        this.line = line;
         this.operator = operator;
         this.right = right;
     }
